@@ -17,7 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	pb "github.com/GalitskyKK/nekkus-core/internal/protocol"
+	pb "github.com/GalitskyKK/nekkus-core/pkg/protocol"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
