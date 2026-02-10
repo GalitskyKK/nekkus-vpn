@@ -466,6 +466,9 @@ func startHTTPServer(addr string, state *vpnState, store *configStore, subs *sub
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		if applyCORS(w, r) {
+			return
+		}
 		if r.Method != http.MethodGet {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 			return
@@ -475,6 +478,9 @@ func startHTTPServer(addr string, state *vpnState, store *configStore, subs *sub
 	})
 
 	mux.HandleFunc("/configs", func(w http.ResponseWriter, r *http.Request) {
+		if applyCORS(w, r) {
+			return
+		}
 		switch r.Method {
 		case http.MethodGet:
 			writeJSON(w, http.StatusOK, store.list())
@@ -513,6 +519,9 @@ func startHTTPServer(addr string, state *vpnState, store *configStore, subs *sub
 	})
 
 	mux.HandleFunc("/subscriptions", func(w http.ResponseWriter, r *http.Request) {
+		if applyCORS(w, r) {
+			return
+		}
 		switch r.Method {
 		case http.MethodGet:
 			writeJSON(w, http.StatusOK, subs.list())
@@ -573,6 +582,9 @@ func startHTTPServer(addr string, state *vpnState, store *configStore, subs *sub
 	})
 
 	mux.HandleFunc("/subscriptions/refresh", func(w http.ResponseWriter, r *http.Request) {
+		if applyCORS(w, r) {
+			return
+		}
 		if r.Method != http.MethodPost {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 			return
@@ -603,6 +615,9 @@ func startHTTPServer(addr string, state *vpnState, store *configStore, subs *sub
 	})
 
 	mux.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
+		if applyCORS(w, r) {
+			return
+		}
 		if r.Method != http.MethodPost {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 			return
@@ -625,6 +640,9 @@ func startHTTPServer(addr string, state *vpnState, store *configStore, subs *sub
 	})
 
 	mux.HandleFunc("/disconnect", func(w http.ResponseWriter, r *http.Request) {
+		if applyCORS(w, r) {
+			return
+		}
 		if r.Method != http.MethodPost {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 			return
@@ -643,6 +661,19 @@ func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func applyCORS(w http.ResponseWriter, r *http.Request) bool {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return true
+	}
+
+	return false
 }
 
 func fetchSubscription(url string) (string, error) {
