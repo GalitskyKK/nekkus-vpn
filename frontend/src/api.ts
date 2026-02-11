@@ -62,3 +62,5 @@ export const disconnectVPN = () =>
 
 export const fetchServers = (configId: string) =>
   request<string[]>(`/servers?config_id=${encodeURIComponent(configId)}`)
+
+export const fetchLogs = () => request<string[]>('/logs')

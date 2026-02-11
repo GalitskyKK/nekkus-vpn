@@ -86,6 +86,24 @@
   gap: 16px;
 }
 
+.panel__logs {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.panel__logs--hint {
+  background: #f1f5f9;
+  color: #475569;
+}
+
 .panel__row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

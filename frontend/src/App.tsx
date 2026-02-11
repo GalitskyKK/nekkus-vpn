@@ -6,6 +6,7 @@ import {
   connectVPN,
   disconnectVPN,
   fetchConfigs,
+  fetchLogs,
   fetchSettings,
   fetchServers,
   fetchStatus,
@@ -34,6 +35,8 @@ function App() {
   const [selectedServer, setSelectedServer] = useState('')
   const [preferredServer, setPreferredServer] = useState('')
   const [defaultsApplied, setDefaultsApplied] = useState(false)
+  const [logs, setLogs] = useState<string[]>([])
+  const [logsVisible, setLogsVisible] = useState(false)
 
   const activeConfig = useMemo(
     () => configs.find((config) => config.id === status?.activeConfigId),
@@ -73,6 +76,31 @@ function App() {
     }, statusRefreshMs)
     return () => window.clearInterval(intervalId)
   }, [])
+
+  useEffect(() => {
+    if (!logsVisible) {
+      return
+    }
+    let cancelled = false
+    const loadLogs = async () => {
+      try {
+        const nextLogs = await fetchLogs()
+        if (!cancelled) {
+          setLogs(nextLogs)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(error instanceof Error ? error.message : 'Не удалось загрузить логи')
+        }
+      }
+    }
+    void loadLogs()
+    const intervalId = window.setInterval(loadLogs, 2000)
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
+  }, [logsVisible])
 
   useEffect(() => {
     if (!connectConfigId) {
@@ -384,6 +412,22 @@ function App() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel__header">
+          <h2>Логи sing-box</h2>
+          <button className="btn btn--ghost" onClick={() => setLogsVisible((prev) => !prev)}>
+            {logsVisible ? 'Скрыть' : 'Показать'}
+          </button>
+        </div>
+        {logsVisible ? (
+          <div className="panel__logs">
+            {logs.length ? logs.join('\n') : 'Нет логов'}
+          </div>
+        ) : (
+          <div className="panel__logs panel__logs--hint">Логи показываются только в standalone UI</div>
+        )}
       </section>
     </div>
   )

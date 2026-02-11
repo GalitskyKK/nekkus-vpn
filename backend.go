@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -400,7 +401,7 @@ type proxyEngine struct {
 	lastError string
 }
 
-func (e *proxyEngine) Start(binaryPath, configPath string) error {
+func (e *proxyEngine) Start(binaryPath, configPath string, buffer *logBuffer) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -410,8 +411,14 @@ func (e *proxyEngine) Start(binaryPath, configPath string) error {
 	}
 
 	cmd := exec.Command(binaryPath, "run", "-c", configPath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	stdout, stderr, pipeErr := attachSingBoxPipes(cmd)
+	if pipeErr != nil {
+		e.lastError = pipeErr.Error()
+		return pipeErr
+	}
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	}
 
 	if err := cmd.Start(); err != nil {
 		e.lastError = err.Error()
@@ -421,6 +428,9 @@ func (e *proxyEngine) Start(binaryPath, configPath string) error {
 	e.cmd = cmd
 	e.running = true
 	e.lastError = ""
+
+	go streamSingBoxLogs(stdout, buffer)
+	go streamSingBoxLogs(stderr, buffer)
 
 	go func() {
 		err := cmd.Wait()
@@ -458,6 +468,8 @@ type moduleServer struct {
 	subs     *subscriptionStore
 	settings *settingsStore
 	engine   *proxyEngine
+	dataDir  string
+	logs     *logBuffer
 }
 
 func (s *moduleServer) Ping(ctx context.Context, req *pb.PingRequest) (*pb.PongResponse, error) {
@@ -550,7 +562,7 @@ func (s *moduleServer) ExecuteAction(ctx context.Context, req *pb.ActionRequest)
 			}, nil
 		}
 
-		configPath := filepath.Join(defaultDataDir, "sing-box.json")
+		configPath := filepath.Join(s.dataDir, "sing-box.json")
 		if err := writeSingBoxConfig(configPath, outbound); err != nil {
 			s.state.setEngineStatus(false, err.Error(), "")
 			return &pb.ActionResponse{
@@ -559,7 +571,7 @@ func (s *moduleServer) ExecuteAction(ctx context.Context, req *pb.ActionRequest)
 			}, nil
 		}
 
-		binaryPath, err := resolveSingBoxPath(defaultDataDir)
+		binaryPath, err := resolveSingBoxPath(s.dataDir)
 		if err != nil {
 			s.state.setEngineStatus(false, err.Error(), "")
 			return &pb.ActionResponse{
@@ -568,7 +580,7 @@ func (s *moduleServer) ExecuteAction(ctx context.Context, req *pb.ActionRequest)
 			}, nil
 		}
 
-		if err := s.engine.Start(binaryPath, configPath); err != nil {
+		if err := s.engine.Start(binaryPath, configPath, s.logs); err != nil {
 			s.state.setEngineStatus(false, err.Error(), "")
 			return &pb.ActionResponse{
 				Success: false,
@@ -651,6 +663,7 @@ func RunBackend(options BackendOptions) (*grpc.Server, error) {
 	}
 
 	engine := &proxyEngine{}
+	logs := newLogBuffer(300)
 	grpcServer := grpc.NewServer()
 	pb.RegisterModuleServiceServer(grpcServer, &moduleServer{
 		state:    state,
@@ -658,6 +671,8 @@ func RunBackend(options BackendOptions) (*grpc.Server, error) {
 		subs:     subscriptions,
 		settings: settings,
 		engine:   engine,
+		dataDir:  options.DataDir,
+		logs:     logs,
 	})
 
 	go func() {
@@ -668,7 +683,7 @@ func RunBackend(options BackendOptions) (*grpc.Server, error) {
 	}()
 
 	if options.StartHTTP {
-		go startHTTPServer(options.HTTPAddr, state, store, subscriptions, settings, engine)
+		go startHTTPServer(options.HTTPAddr, state, store, subscriptions, settings, engine, options.DataDir, logs)
 	}
 
 	if options.Mode == "hub" && options.HubAddr != "" {
@@ -676,7 +691,7 @@ func RunBackend(options BackendOptions) (*grpc.Server, error) {
 	}
 
 	if shouldAutoConnect() {
-		tryAutoConnect(state, store, settings, engine, options.DataDir)
+		tryAutoConnect(state, store, settings, engine, logs, options.DataDir)
 	}
 
 	return grpcServer, nil
@@ -712,7 +727,7 @@ func waitForShutdown(grpcServer *grpc.Server) {
 	grpcServer.GracefulStop()
 }
 
-func startHTTPServer(addr string, state *vpnState, store *configStore, subs *subscriptionStore, settings *settingsStore, engine *proxyEngine) {
+func startHTTPServer(addr string, state *vpnState, store *configStore, subs *subscriptionStore, settings *settingsStore, engine *proxyEngine, dataDir string, logs *logBuffer) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
@@ -957,21 +972,21 @@ func startHTTPServer(addr string, state *vpnState, store *configStore, subs *sub
 			return
 		}
 
-		configPath := filepath.Join(defaultDataDir, "sing-box.json")
+		configPath := filepath.Join(dataDir, "sing-box.json")
 		if err := writeSingBoxConfig(configPath, outbound); err != nil {
 			state.setEngineStatus(false, err.Error(), "")
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return
 		}
 
-		binaryPath, err := resolveSingBoxPath(defaultDataDir)
+		binaryPath, err := resolveSingBoxPath(dataDir)
 		if err != nil {
 			state.setEngineStatus(false, err.Error(), "")
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return
 		}
 
-		if err := engine.Start(binaryPath, configPath); err != nil {
+		if err := engine.Start(binaryPath, configPath, logs); err != nil {
 			state.setEngineStatus(false, err.Error(), "")
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return
@@ -999,6 +1014,20 @@ func startHTTPServer(addr string, state *vpnState, store *configStore, subs *sub
 		state.disconnect()
 		state.setEngineStatus(false, engine.LastError(), "")
 		writeJSON(w, http.StatusOK, state.snapshot())
+	})
+	mux.HandleFunc("/logs", func(w http.ResponseWriter, r *http.Request) {
+		if applyCORS(w, r) {
+			return
+		}
+		if r.Method != http.MethodGet {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+			return
+		}
+		if logs == nil {
+			writeJSON(w, http.StatusOK, []string{})
+			return
+		}
+		writeJSON(w, http.StatusOK, logs.Snapshot())
 	})
 
 	mux.HandleFunc("/servers", func(w http.ResponseWriter, r *http.Request) {
@@ -1158,7 +1187,7 @@ func shouldAutoConnect() bool {
 	return value == "1" || value == "true" || value == "yes" || value == "on"
 }
 
-func tryAutoConnect(state *vpnState, store *configStore, settings *settingsStore, engine *proxyEngine, dataDir string) {
+func tryAutoConnect(state *vpnState, store *configStore, settings *settingsStore, engine *proxyEngine, logs *logBuffer, dataDir string) {
 	if settings == nil {
 		return
 	}
@@ -1198,7 +1227,7 @@ func tryAutoConnect(state *vpnState, store *configStore, settings *settingsStore
 		return
 	}
 
-	if err := engine.Start(binaryPath, configPath); err != nil {
+	if err := engine.Start(binaryPath, configPath, logs); err != nil {
 		state.setEngineStatus(false, err.Error(), "")
 		return
 	}
@@ -1239,6 +1268,76 @@ func setSystemProxy(enabled bool, address string) error {
 	internetSetOption.Call(0, internetOptionSettingsChanged, 0, 0)
 	internetSetOption.Call(0, internetOptionRefresh, 0, 0)
 	return nil
+}
+
+type logBuffer struct {
+	mu   sync.RWMutex
+	max  int
+	data []string
+}
+
+func newLogBuffer(max int) *logBuffer {
+	return &logBuffer{max: max, data: make([]string, 0, max)}
+}
+
+func (b *logBuffer) Add(line string) {
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
+	if len(b.data) >= b.max {
+		b.data = b.data[1:]
+	}
+	b.data = append(b.data, line)
+	b.mu.Unlock()
+}
+
+func (b *logBuffer) Snapshot() []string {
+	if b == nil {
+		return []string{}
+	}
+	b.mu.RLock()
+	out := make([]string, len(b.data))
+	copy(out, b.data)
+	b.mu.RUnlock()
+	return out
+}
+
+func attachSingBoxPipes(cmd *exec.Cmd) (io.ReadCloser, io.ReadCloser, error) {
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, nil, err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, nil, err
+	}
+	return stdout, stderr, nil
+}
+
+func streamSingBoxLogs(reader io.Reader, buffer *logBuffer) {
+	if reader == nil {
+		return
+	}
+	mode := strings.TrimSpace(strings.ToLower(os.Getenv("NEKKUS_SINGBOX_LOG")))
+	if mode == "" {
+		mode = "memory"
+	}
+	if mode == "none" || mode == "off" || mode == "false" || mode == "0" {
+		_, _ = io.Copy(io.Discard, reader)
+		return
+	}
+	scanner := bufio.NewScanner(reader)
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if mode == "stdout" {
+			fmt.Println(line)
+			continue
+		}
+		buffer.Add(line)
+	}
 }
 
 func buildVlessOutbound(raw, tag string) (map[string]interface{}, error) {
