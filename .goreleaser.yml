@@ -5,7 +5,10 @@ project_name: nekkus-net
 
 before:
   hooks:
-    - cd frontend && npm install && npm run build
+    - cmd: npm install
+      dir: frontend
+    - cmd: npm run build
+      dir: frontend
 
 builds:
   - id: nekkus-net
