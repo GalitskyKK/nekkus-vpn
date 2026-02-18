@@ -84,7 +84,10 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          files: dist/*
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*_checksums.txt
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
