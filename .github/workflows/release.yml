@@ -49,7 +49,13 @@ jobs:
       - name: Build frontend
         run: cd frontend && npm ci && npm run build
 
-      - name: Run GoReleaser (build only)
+      - name: Set manifest version from tag
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          sed "s/\"version\": \"0.0.0\"/\"version\": \"$VERSION\"/" manifest.json > manifest.json.tmp && mv manifest.json.tmp manifest.json
+
+      - name: Run GoReleaser (build + archive с manifest)
         uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
@@ -87,7 +93,6 @@ jobs:
           files: |
             dist/*.tar.gz
             dist/*.zip
-            dist/*_checksums.txt
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
