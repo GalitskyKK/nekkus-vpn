@@ -11,10 +11,10 @@ builds:
   - id: nekkus-net
     main: ./cmd
     binary: nekkus-net
+    # darwin исключён: fyne.io/systray и webview требуют нативной сборки на macOS
     goos:
-      - windows
-      - darwin
       - linux
+      - windows
     goarch:
       - amd64
       - arm64
