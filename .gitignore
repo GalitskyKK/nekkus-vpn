@@ -4,4 +4,5 @@ bin
 dist
 data
 *.syso
-wails_windows_*.syso
+sing-box
+release

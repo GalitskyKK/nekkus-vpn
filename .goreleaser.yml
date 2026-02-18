@@ -1,0 +1,36 @@
+# Релиз бинарников nekkus-net в GitHub Releases.
+# Триггер: git tag v* и push (например v0.1.0).
+
+project_name: nekkus-net
+
+before:
+  hooks:
+    - cd frontend && npm install && npm run build
+
+builds:
+  - id: nekkus-net
+    main: ./cmd
+    binary: nekkus-net
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+
+archives:
+  - id: default
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+
+release:
+  github:
+    owner: GalitskyKK
+    repository: nekkus-net
+  name_template: "v{{ .Version }}"

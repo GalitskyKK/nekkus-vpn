@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@nekkus/ui-kit": "github:GalitskyKK/nekkus-ui-kit#main",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

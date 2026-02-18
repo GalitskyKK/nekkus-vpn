@@ -50,4 +50,12 @@ export type ConnectPayload = {
 export type VpnSettings = {
   default_config_id?: string
   default_server?: string
+  sing_box_path?: string
+}
+
+export type SingBoxStatus = {
+  installed: boolean
+  path?: string
+  version?: string
+  source?: 'env' | 'settings' | 'path' | 'installed'
 }

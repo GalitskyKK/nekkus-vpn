@@ -7,13 +7,16 @@ import {
   disconnectVPN,
   fetchConfigs,
   fetchLogs,
+  fetchSingBoxStatus,
   fetchSettings,
   fetchServers,
   fetchStatus,
   fetchSubscriptions,
+  installSingBox,
   refreshSubscriptions,
+  updateSettings,
 } from './api'
-import type { Subscription, VpnConfig, VpnSettings, VpnStatus } from './types'
+import type { SingBoxStatus, Subscription, VpnConfig, VpnSettings, VpnStatus } from './types'
 
 const statusRefreshMs = 2000
 
@@ -22,6 +25,7 @@ function App() {
   const [configs, setConfigs] = useState<VpnConfig[]>([])
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [settings, setSettings] = useState<VpnSettings | null>(null)
+  const [singBoxStatus, setSingBoxStatus] = useState<SingBoxStatus | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isBusy, setIsBusy] = useState(false)
 
@@ -46,16 +50,18 @@ function App() {
   const loadAll = useCallback(async () => {
     try {
       setErrorMessage(null)
-      const [nextStatus, nextConfigs, nextSubscriptions, nextSettings] = await Promise.all([
+      const [nextStatus, nextConfigs, nextSubscriptions, nextSettings, nextSingBoxStatus] = await Promise.all([
         fetchStatus(),
         fetchConfigs(),
         fetchSubscriptions(),
         fetchSettings(),
+        fetchSingBoxStatus(),
       ])
       setStatus(nextStatus)
-      setConfigs(nextConfigs)
-      setSubscriptions(nextSubscriptions)
-      setSettings(nextSettings)
+      setConfigs(Array.isArray(nextConfigs) ? nextConfigs : [])
+      setSubscriptions(Array.isArray(nextSubscriptions) ? nextSubscriptions : [])
+      setSettings(nextSettings ?? {})
+      setSingBoxStatus(nextSingBoxStatus ?? null)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Failed to load data')
     }
@@ -210,7 +216,11 @@ function App() {
       setStatus(nextStatus)
       if (connectConfigId) {
         const nextServer = selectedServer || connectServer.trim()
-        setSettings({ default_config_id: connectConfigId, default_server: nextServer })
+        const nextSettings = await updateSettings({
+          default_config_id: connectConfigId,
+          default_server: nextServer,
+        })
+        setSettings(nextSettings)
         setPreferredServer(nextServer)
       }
     } catch (error) {
@@ -219,6 +229,20 @@ function App() {
       setIsBusy(false)
     }
   }, [connectConfigId, connectServer, selectedServer])
+
+  const handleInstallSingBox = useCallback(async () => {
+    try {
+      setIsBusy(true)
+      setErrorMessage(null)
+      const nextStatus = await installSingBox()
+      setSingBoxStatus(nextStatus)
+      await loadAll()
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Не удалось установить sing-box')
+    } finally {
+      setIsBusy(false)
+    }
+  }, [loadAll])
 
   const handleDisconnect = useCallback(async () => {
     try {
@@ -267,6 +291,27 @@ function App() {
       {errorMessage ? <div className="app__error">{errorMessage}</div> : null}
 
       <section className="panel">
+        <div className="panel__header">
+          <h2>Зависимости</h2>
+        </div>
+        <div className="panel__row">
+          <div className="field field--stretch">
+            <span>sing-box</span>
+            <div className="list__meta">
+              {singBoxStatus?.installed
+                ? `OK${singBoxStatus.path ? `: ${singBoxStatus.path}` : ''}`
+                : 'Не установлен'}
+            </div>
+          </div>
+          {!singBoxStatus?.installed ? (
+            <button className="btn btn--primary" onClick={handleInstallSingBox} disabled={isBusy}>
+              Установить
+            </button>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="panel">
         <h2>Управление подключением</h2>
         <div className="panel__row">
           <label className="field">
@@ -277,7 +322,7 @@ function App() {
               disabled={isBusy}
             >
               <option value="">Не выбран</option>
-              {configs.map((config) => (
+              {(configs ?? []).map((config) => (
                 <option key={config.id} value={config.id}>
                   {config.name}
                 </option>
@@ -292,7 +337,7 @@ function App() {
                 onChange={(event) => setSelectedServer(event.target.value)}
                 disabled={isBusy}
               >
-                {availableServers.map((server) => (
+                {(availableServers ?? []).map((server) => (
                   <option key={server} value={server}>
                     {server}
                   </option>
@@ -324,7 +369,7 @@ function App() {
 
       <section className="panel">
         <div className="panel__header">
-          <h2>Конфиги ({configs.length})</h2>
+          <h2>Конфиги ({(configs ?? []).length})</h2>
           <button className="btn btn--ghost" onClick={loadAll} disabled={isBusy}>
             Обновить
           </button>
@@ -355,7 +400,7 @@ function App() {
           Добавить конфиг
         </button>
         <div className="list">
-          {configs.map((config) => (
+          {(configs ?? []).map((config) => (
             <div key={config.id} className="list__item">
               <div>
                 <div className="list__title">{config.name}</div>
@@ -369,7 +414,7 @@ function App() {
 
       <section className="panel">
         <div className="panel__header">
-          <h2>Подписки ({subscriptions.length})</h2>
+          <h2>Подписки ({(subscriptions ?? []).length})</h2>
           <button className="btn btn--ghost" onClick={handleRefreshSubscriptions} disabled={isBusy}>
             Обновить все
           </button>
@@ -400,7 +445,7 @@ function App() {
           Добавить подписку
         </button>
         <div className="list">
-          {subscriptions.map((subscription) => (
+          {(subscriptions ?? []).map((subscription) => (
             <div key={subscription.id} className="list__item">
               <div>
                 <div className="list__title">{subscription.name}</div>

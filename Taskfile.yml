@@ -9,9 +9,9 @@ includes:
   android: ./build/android/Taskfile.yml
 
 vars:
-  APP_NAME: "nekkus-vpn"
+  APP_NAME: "nekkus-net"
   BIN_DIR: "bin"
-  VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
+  VITE_PORT: '{{.VITE_PORT | default 9245}}'
 
 tasks:
   build:
@@ -32,7 +32,7 @@ tasks:
   dev:
     summary: Runs the application in development mode
     cmds:
-      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
+      - task: common:run:server
 
   setup:docker:
     summary: Builds Docker image for cross-compilation (~800MB download)
