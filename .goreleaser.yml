@@ -32,5 +32,5 @@ archives:
 release:
   github:
     owner: GalitskyKK
-    repository: nekkus-net
+    name: nekkus-net
   name_template: "v{{ .Version }}"
