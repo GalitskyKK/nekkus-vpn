@@ -1,4 +1,5 @@
 # macos-latest = arm64. CGO для webview/systray; darwin/amd64 не собираем.
+project_name: nekkus-net
 builds:
   - id: nekkus-net
     main: ./cmd
@@ -9,3 +10,20 @@ builds:
       - arm64
     env:
       - CGO_ENABLED=1
+archives:
+  - id: default
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    wrap_in_directory: '{{ `com.nekkus.net` }}'
+    files:
+      - none*
+      - src: release_assets/manifest.json
+        dst: .
+release:
+  github:
+    owner: GalitskyKK
+    name: nekkus-net
+  name_template: "v{{ .Version }}"
