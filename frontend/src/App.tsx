@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import './App.css'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Button,
+  Card,
+  Input,
+  PageLayout,
+  Pill,
+  Section,
+  Select,
+  StatusDot,
+} from '@nekkus/ui-kit'
 import {
   addConfig,
   addSubscription,
@@ -43,20 +52,21 @@ function App() {
   const [logsVisible, setLogsVisible] = useState(false)
 
   const activeConfig = useMemo(
-    () => configs.find((config) => config.id === status?.activeConfigId),
+    () => configs.find((c) => c.id === status?.activeConfigId),
     [configs, status?.activeConfigId],
   )
 
   const loadAll = useCallback(async () => {
     try {
       setErrorMessage(null)
-      const [nextStatus, nextConfigs, nextSubscriptions, nextSettings, nextSingBoxStatus] = await Promise.all([
-        fetchStatus(),
-        fetchConfigs(),
-        fetchSubscriptions(),
-        fetchSettings(),
-        fetchSingBoxStatus(),
-      ])
+      const [nextStatus, nextConfigs, nextSubscriptions, nextSettings, nextSingBoxStatus] =
+        await Promise.all([
+          fetchStatus(),
+          fetchConfigs(),
+          fetchSubscriptions(),
+          fetchSettings(),
+          fetchSingBoxStatus(),
+        ])
       setStatus(nextStatus)
       setConfigs(Array.isArray(nextConfigs) ? nextConfigs : [])
       setSubscriptions(Array.isArray(nextSubscriptions) ? nextSubscriptions : [])
@@ -84,16 +94,12 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!logsVisible) {
-      return
-    }
+    if (!logsVisible) return
     let cancelled = false
     const loadLogs = async () => {
       try {
         const nextLogs = await fetchLogs()
-        if (!cancelled) {
-          setLogs(nextLogs)
-        }
+        if (!cancelled) setLogs(nextLogs)
       } catch (error) {
         if (!cancelled) {
           setErrorMessage(error instanceof Error ? error.message : 'Не удалось загрузить логи')
@@ -141,9 +147,7 @@ function App() {
   }, [connectConfigId, preferredServer])
 
   useEffect(() => {
-    if (defaultsApplied || !settings) {
-      return
-    }
+    if (defaultsApplied || !settings) return
     if (settings.default_config_id && !connectConfigId) {
       setConnectConfigId(settings.default_config_id)
     }
@@ -164,10 +168,7 @@ function App() {
     try {
       setIsBusy(true)
       setErrorMessage(null)
-      const created = await addConfig({
-        name: configName.trim(),
-        content: configContent.trim(),
-      })
+      const created = await addConfig({ name: configName.trim(), content: configContent.trim() })
       setConfigs((prev) => [created, ...prev])
       setConfigName('')
       setConfigContent('')
@@ -270,211 +271,209 @@ function App() {
     }
   }, [loadAll])
 
+  const configOptions = useMemo(
+    () => [{ value: '', label: 'Не выбран' }, ...configs.map((c) => ({ value: c.id, label: c.name }))],
+    [configs],
+  )
+  const serverOptions = useMemo(
+    () => availableServers.map((s) => ({ value: s, label: s })),
+    [availableServers],
+  )
+
   return (
-    <div className="app">
-      <header className="app__header">
-        <div>
-          <p className="app__eyebrow">nekkus VPN</p>
-          <h1 className="app__title">Standalone панель</h1>
-        </div>
-        <div className="app__status">
-          <div className={`status-pill ${status?.connected ? 'status-pill--on' : 'status-pill--off'}`}>
-            {status?.connected ? 'Подключено' : 'Отключено'}
+    <PageLayout>
+      <div className="net">
+        <header className="net__header">
+          <div>
+            <p className="net__eyebrow">nekkus VPN</p>
+            <h1 className="net__title">Standalone панель</h1>
           </div>
-          <div className="status-meta">
-            <span>Сервер: {status?.server || '—'}</span>
-            <span>Конфиг: {activeConfig?.name || '—'}</span>
-          </div>
-        </div>
-      </header>
-
-      {errorMessage ? <div className="app__error">{errorMessage}</div> : null}
-
-      <section className="panel">
-        <div className="panel__header">
-          <h2>Зависимости</h2>
-        </div>
-        <div className="panel__row">
-          <div className="field field--stretch">
-            <span>sing-box</span>
-            <div className="list__meta">
-              {singBoxStatus?.installed
-                ? `OK${singBoxStatus.path ? `: ${singBoxStatus.path}` : ''}`
-                : 'Не установлен'}
+          <div className="net__status">
+            <StatusDot
+              status={status?.connected ? 'online' : 'offline'}
+              label={status?.connected ? 'Подключено' : 'Отключено'}
+              pulse={!!status?.connected}
+            />
+            <div className="net__status-meta">
+              <span>Сервер: {status?.server || '—'}</span>
+              <span>Конфиг: {activeConfig?.name || '—'}</span>
             </div>
           </div>
-          {!singBoxStatus?.installed ? (
-            <button className="btn btn--primary" onClick={handleInstallSingBox} disabled={isBusy}>
-              Установить
-            </button>
-          ) : null}
-        </div>
-      </section>
+        </header>
 
-      <section className="panel">
-        <h2>Управление подключением</h2>
-        <div className="panel__row">
-          <label className="field">
-            <span>Конфиг</span>
-            <select
+        {errorMessage ? (
+          <div className="net__error" role="alert">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <Section title="Зависимости">
+          <Card className="net__card">
+          <div className="net__row">
+            <div className="net__field net__field--stretch">
+              <span className="net__field-label">sing-box</span>
+              <span className="net__meta">
+                {singBoxStatus?.installed
+                  ? `OK${singBoxStatus.path ? `: ${singBoxStatus.path}` : ''}`
+                  : 'Не установлен'}
+              </span>
+            </div>
+            {!singBoxStatus?.installed ? (
+              <Button variant="primary" onClick={handleInstallSingBox} disabled={isBusy}>
+                Установить
+              </Button>
+            ) : null}
+          </div>
+          </Card>
+        </Section>
+
+        <Section title="Управление подключением">
+          <Card className="net__card">
+          <div className="net__row">
+            <Select
+              label="Конфиг"
+              options={configOptions}
               value={connectConfigId}
-              onChange={(event) => setConnectConfigId(event.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setConnectConfigId(e.target.value)}
               disabled={isBusy}
-            >
-              <option value="">Не выбран</option>
-              {(configs ?? []).map((config) => (
-                <option key={config.id} value={config.id}>
-                  {config.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {availableServers.length > 0 ? (
-            <label className="field">
-              <span>Сервер</span>
-              <select
+            />
+            {availableServers.length > 0 ? (
+              <Select
+                label="Сервер"
+                options={serverOptions}
                 value={selectedServer}
-                onChange={(event) => setSelectedServer(event.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedServer(e.target.value)}
                 disabled={isBusy}
-              >
-                {(availableServers ?? []).map((server) => (
-                  <option key={server} value={server}>
-                    {server}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <label className="field">
-              <span>Сервер</span>
-              <input
+              />
+            ) : (
+              <Input
+                label="Сервер"
                 type="text"
                 value={connectServer}
-                onChange={(event) => setConnectServer(event.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConnectServer(e.target.value)}
                 placeholder="auto / custom"
                 disabled={isBusy}
               />
-            </label>
-          )}
-        </div>
-        <div className="panel__actions">
-          <button className="btn btn--primary" onClick={handleConnect} disabled={isBusy}>
-            Подключить
-          </button>
-          <button className="btn" onClick={handleDisconnect} disabled={isBusy}>
-            Отключить
-          </button>
-        </div>
-      </section>
+            )}
+          </div>
+          <div className="net__actions">
+            <Button variant="primary" onClick={handleConnect} disabled={isBusy}>
+              Подключить
+            </Button>
+            <Button variant="secondary" onClick={handleDisconnect} disabled={isBusy}>
+              Отключить
+            </Button>
+          </div>
+          </Card>
+        </Section>
 
-      <section className="panel">
-        <div className="panel__header">
-          <h2>Конфиги ({(configs ?? []).length})</h2>
-          <button className="btn btn--ghost" onClick={loadAll} disabled={isBusy}>
-            Обновить
-          </button>
-        </div>
-        <div className="panel__row">
-          <label className="field">
-            <span>Имя</span>
-            <input
-              type="text"
+        <Section title={`Конфиги (${configs.length})`}>
+          <Card className="net__card">
+          <div className="net__header-actions">
+            <Button variant="ghost" size="sm" onClick={loadAll} disabled={isBusy}>
+              Обновить
+            </Button>
+          </div>
+          <div className="net__row">
+            <Input
+              label="Имя"
               value={configName}
-              onChange={(event) => setConfigName(event.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfigName(e.target.value)}
               placeholder="MyConfig"
               disabled={isBusy}
             />
-          </label>
-          <label className="field field--stretch">
-            <span>Контент</span>
-            <textarea
-              value={configContent}
-              onChange={(event) => setConfigContent(event.target.value)}
-              placeholder="raw config"
-              rows={4}
-              disabled={isBusy}
-            />
-          </label>
-        </div>
-        <button className="btn btn--primary" onClick={handleCreateConfig} disabled={isBusy}>
-          Добавить конфиг
-        </button>
-        <div className="list">
-          {(configs ?? []).map((config) => (
-            <div key={config.id} className="list__item">
-              <div>
-                <div className="list__title">{config.name}</div>
-                <div className="list__meta">ID: {config.id}</div>
-              </div>
-              <div className="list__meta">{config.source_url ? 'Subscription' : 'Manual'}</div>
+            <div className="net__field net__field--stretch">
+              <label className="net__field-label">Контент</label>
+              <textarea
+                className="net__textarea"
+                value={configContent}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setConfigContent(e.target.value)}
+                placeholder="raw config"
+                rows={4}
+                disabled={isBusy}
+              />
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+          <Button variant="primary" onClick={handleCreateConfig} disabled={isBusy}>
+            Добавить конфиг
+          </Button>
+          <div className="net__list">
+            {configs.map((config) => (
+              <div key={config.id} className="net__list-item">
+                <div>
+                  <div className="net__list-title">{config.name}</div>
+                  <div className="net__meta">ID: {config.id}</div>
+                </div>
+                <Pill variant={config.source_url ? 'info' : 'default'}>
+                  {config.source_url ? 'Subscription' : 'Manual'}
+                </Pill>
+              </div>
+            ))}
+          </div>
+          </Card>
+        </Section>
 
-      <section className="panel">
-        <div className="panel__header">
-          <h2>Подписки ({(subscriptions ?? []).length})</h2>
-          <button className="btn btn--ghost" onClick={handleRefreshSubscriptions} disabled={isBusy}>
-            Обновить все
-          </button>
-        </div>
-        <div className="panel__row">
-          <label className="field">
-            <span>Имя</span>
-            <input
-              type="text"
+        <Section title={`Подписки (${subscriptions.length})`}>
+          <Card className="net__card">
+          <div className="net__header-actions">
+            <Button variant="ghost" size="sm" onClick={handleRefreshSubscriptions} disabled={isBusy}>
+              Обновить все
+            </Button>
+          </div>
+          <div className="net__row">
+            <Input
+              label="Имя"
               value={subscriptionName}
-              onChange={(event) => setSubscriptionName(event.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubscriptionName(e.target.value)}
               placeholder="MySubscription"
               disabled={isBusy}
             />
-          </label>
-          <label className="field field--stretch">
-            <span>URL</span>
-            <input
+            <Input
+              label="URL"
               type="url"
               value={subscriptionUrl}
-              onChange={(event) => setSubscriptionUrl(event.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubscriptionUrl(e.target.value)}
               placeholder="https://example.com/sub.txt"
               disabled={isBusy}
             />
-          </label>
-        </div>
-        <button className="btn btn--primary" onClick={handleCreateSubscription} disabled={isBusy}>
-          Добавить подписку
-        </button>
-        <div className="list">
-          {(subscriptions ?? []).map((subscription) => (
-            <div key={subscription.id} className="list__item">
-              <div>
-                <div className="list__title">{subscription.name}</div>
-                <div className="list__meta">{subscription.url}</div>
-              </div>
-              <div className="list__meta">
-                {subscription.last_error ? `Ошибка: ${subscription.last_error}` : 'OK'}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="panel__header">
-          <h2>Логи sing-box</h2>
-          <button className="btn btn--ghost" onClick={() => setLogsVisible((prev) => !prev)}>
-            {logsVisible ? 'Скрыть' : 'Показать'}
-          </button>
-        </div>
-        {logsVisible ? (
-          <div className="panel__logs">
-            {logs.length ? logs.join('\n') : 'Нет логов'}
           </div>
-        ) : (
-          <div className="panel__logs panel__logs--hint">Логи показываются только в standalone UI</div>
-        )}
-      </section>
-    </div>
+          <Button variant="primary" onClick={handleCreateSubscription} disabled={isBusy}>
+            Добавить подписку
+          </Button>
+          <div className="net__list">
+            {subscriptions.map((sub) => (
+              <div key={sub.id} className="net__list-item">
+                <div>
+                  <div className="net__list-title">{sub.name}</div>
+                  <div className="net__meta">{sub.url}</div>
+                </div>
+                <Pill variant={sub.last_error ? 'error' : 'success'}>
+                  {sub.last_error ? `Ошибка: ${sub.last_error}` : 'OK'}
+                </Pill>
+              </div>
+            ))}
+          </div>
+          </Card>
+        </Section>
+
+        <Section title="Логи sing-box">
+          <Card className="net__card">
+          <div className="net__header-actions">
+            <Button variant="ghost" size="sm" onClick={() => setLogsVisible((v) => !v)}>
+              {logsVisible ? 'Скрыть' : 'Показать'}
+            </Button>
+          </div>
+          {logsVisible ? (
+            <div className="net__logs">{logs.length ? logs.join('\n') : 'Нет логов'}</div>
+          ) : (
+            <div className="net__logs net__logs--hint">
+              Логи показываются только в standalone UI
+            </div>
+          )}
+          </Card>
+        </Section>
+      </div>
+    </PageLayout>
   )
 }
 
