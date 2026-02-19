@@ -1,0 +1,28 @@
+project_name: nekkus-net
+
+builds:
+  - id: nekkus-net
+    main: ./cmd
+    binary: nekkus-net
+    goos:
+      - windows
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+
+archives:
+  - id: default
+    format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_windows_amd64"
+    wrap_in_directory: com.nekkus.net
+    files:
+      - src: release_assets/manifest.json
+        dst: .
+        strip_parent: true
+
+release:
+  github:
+    owner: GalitskyKK
+    name: nekkus-net
+  name_template: "v{{ .Version }}"
