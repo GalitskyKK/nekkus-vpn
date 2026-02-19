@@ -57,7 +57,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
-          args: release --skip=publish --clean --config .goreleaser.${{ matrix.goos }}.yml
+          args: release --skip=publish --skip=validate --clean --config .goreleaser.${{ matrix.goos }}.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

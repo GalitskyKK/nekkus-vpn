@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 includes:
   common: ./build/Taskfile.yml
@@ -11,7 +11,7 @@ includes:
 vars:
   APP_NAME: "nekkus-net"
   BIN_DIR: "bin"
-  VITE_PORT: '{{.VITE_PORT | default 9245}}'
+  VITE_PORT: "{{.VITE_PORT | default 9245}}"
 
 tasks:
   build:

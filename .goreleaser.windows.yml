@@ -1,8 +1,5 @@
 project_name: nekkus-net
 
-git:
-  allow_dirty: true
-
 builds:
   - id: nekkus-net
     main: ./cmd
