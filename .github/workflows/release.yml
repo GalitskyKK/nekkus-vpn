@@ -43,11 +43,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config
 
-      - name: Build frontend
-        run: cd frontend && npm ci && npm run build
-
-      - name: Place frontend for Go embed
-        run: mkdir -p ui/frontend && cp -r frontend/dist ui/frontend/
+      - name: Build frontend and place for Go embed
+        run: |
+          mkdir -p ui/frontend
+          cd frontend && npm ci && npm run build
+          cp -r dist ../ui/frontend/
 
       - name: Generate manifest
         run: |
