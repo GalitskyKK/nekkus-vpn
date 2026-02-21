@@ -46,8 +46,8 @@ jobs:
       - name: Build frontend
         run: cd frontend && npm ci && npm run build
 
-      - name: Verify frontend embed
-        run: test -f ui/frontend/dist/index.html || (echo "Missing ui/frontend/dist - embed will be stale" && exit 1)
+      - name: Copy frontend dist for embed
+        run: mkdir -p ui/frontend && cp -r frontend/dist ui/frontend/
 
       - name: Generate manifest
         run: |
