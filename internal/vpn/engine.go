@@ -30,9 +30,11 @@ const (
 )
 
 type TrafficStats struct {
-	Upload    int64 `json:"upload"`
-	Download  int64 `json:"download"`
-	StartedAt int64 `json:"started_at"`
+	Upload        int64 `json:"upload"`
+	Download      int64 `json:"download"`
+	DownloadSpeed int64 `json:"download_speed"`
+	UploadSpeed   int64 `json:"upload_speed"`
+	StartedAt     int64 `json:"started_at"`
 }
 
 type Engine struct {
@@ -323,9 +325,7 @@ func (e *Engine) QuickConnect() error {
 	return fmt.Errorf("no servers available")
 }
 
-func (e *Engine) GetTrafficStats() (*TrafficStats, error) {
-	return &TrafficStats{}, nil
-}
+// GetTrafficStats реализован в traffic.go (gopsutil + TUN-интерфейс).
 
 func (e *Engine) writeTempConfig(cfg string) (string, error) {
 	dir := filepath.Join(e.store.DataDir(), "runtime")

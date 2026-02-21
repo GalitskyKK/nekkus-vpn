@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Button,
   Card,
+  DataText,
   Input,
   PageLayout,
   Pill,
@@ -28,6 +29,17 @@ import {
 import type { SingBoxStatus, Subscription, VpnConfig, VpnSettings, VpnStatus } from './types'
 
 const statusRefreshMs = 2000
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${['B', 'KB', 'MB', 'GB', 'TB'][i]}`
+}
+
+function formatSpeed(bytesPerSec: number): string {
+  return `${formatBytes(bytesPerSec)}/s`
+}
 
 function App() {
   const [status, setStatus] = useState<VpnStatus | null>(null)
@@ -306,6 +318,29 @@ function App() {
             {errorMessage}
           </div>
         ) : null}
+
+        <Section title="Скорость и трафик">
+          <Card className="net__card net__card--metrics" accentTop={!!status?.connected}>
+            <div className="net__metrics">
+              <div className="net__metric">
+                <span className="net__metric-label">↓ Скачивание</span>
+                <DataText size="metric">{formatSpeed(status?.downloadSpeed ?? 0)}</DataText>
+              </div>
+              <div className="net__metric">
+                <span className="net__metric-label">↑ Отдача</span>
+                <DataText size="metric">{formatSpeed(status?.uploadSpeed ?? 0)}</DataText>
+              </div>
+              <div className="net__metric">
+                <span className="net__metric-label">Всего ↓</span>
+                <DataText size="base">{formatBytes(status?.totalDownload ?? 0)}</DataText>
+              </div>
+              <div className="net__metric">
+                <span className="net__metric-label">Всего ↑</span>
+                <DataText size="base">{formatBytes(status?.totalUpload ?? 0)}</DataText>
+              </div>
+            </div>
+          </Card>
+        </Section>
 
         <Section title="Зависимости">
           <Card className="net__card">

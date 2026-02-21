@@ -3,6 +3,7 @@ package module
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	pb "github.com/GalitskyKK/nekkus-core/pkg/protocol"
@@ -12,11 +13,15 @@ import (
 
 type NetModule struct {
 	pb.UnimplementedNekkusModuleServer
-	engine *vpn.Engine
+	engine   *vpn.Engine
+	httpPort int
 }
 
-func New(engine *vpn.Engine) *NetModule {
-	return &NetModule{engine: engine}
+func New(engine *vpn.Engine, httpPort int) *NetModule {
+	if httpPort <= 0 {
+		httpPort = 9001
+	}
+	return &NetModule{engine: engine, httpPort: httpPort}
 }
 
 func (m *NetModule) GetInfo(ctx context.Context, _ *pb.Empty) (*pb.ModuleInfo, error) {
@@ -26,9 +31,9 @@ func (m *NetModule) GetInfo(ctx context.Context, _ *pb.Empty) (*pb.ModuleInfo, e
 		Version:      "1.0.0",
 		Description:  "VPN + Mesh networking",
 		Color:        "#3B82F6",
-		HttpPort:     9001,
+		HttpPort:     int32(m.httpPort),
 		GrpcPort:     19001,
-		UiUrl:        "http://localhost:9001",
+		UiUrl:        fmt.Sprintf("http://127.0.0.1:%d", m.httpPort),
 		Capabilities: []string{"vpn.connect", "vpn.disconnect", "vpn.status", "vpn.servers"},
 		Provides:     []string{"vpn.status", "vpn.traffic", "vpn.servers"},
 		Status:       pb.ModuleStatus_MODULE_RUNNING,

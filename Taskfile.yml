@@ -19,6 +19,13 @@ tasks:
     cmds:
       - task: "{{OS}}:build"
 
+  build:go:
+    summary: Builds only the Go binary (./cmd), no frontend. Use to verify code compiles.
+    cmds:
+      - go build -o "{{.BIN_DIR}}/{{.APP_NAME}}{{.exeExt}}" ./cmd
+    vars:
+      exeExt: '{{if eq OS "windows"}}.exe{{end}}'
+
   package:
     summary: Packages a production build of the application
     cmds:

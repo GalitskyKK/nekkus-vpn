@@ -52,6 +52,24 @@
   gap: 16px;
 }
 
+.net__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 20px;
+}
+
+.net__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.net__metric-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
 .net__error {
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;

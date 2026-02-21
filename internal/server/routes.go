@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	coreserver "github.com/GalitskyKK/nekkus-core/pkg/server"
 	"github.com/GalitskyKK/nekkus-net/internal/store"
@@ -42,16 +43,24 @@ func RegisterRoutes(srv *coreserver.Server, engine *vpn.Engine) {
 			serverName = server.Name
 		}
 		connected := engine.GetStatus() == vpn.Connected
+		downloadSpeed, uploadSpeed := int64(0), int64(0)
+		totalDownload, totalUpload := int64(0), int64(0)
+		if stats, err := engine.GetTrafficStats(); err == nil {
+			downloadSpeed = stats.DownloadSpeed
+			uploadSpeed = stats.UploadSpeed
+			totalDownload = stats.Download
+			totalUpload = stats.Upload
+		}
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"connected":       connected,
 			"server":          serverName,
 			"activeConfigId":  "",
 			"configCount":     0,
-			"downloadSpeed":   0,
-			"uploadSpeed":     0,
-			"totalDownload":   0,
-			"totalUpload":     0,
-			"lastUpdateUnix":  0,
+			"downloadSpeed":   downloadSpeed,
+			"uploadSpeed":     uploadSpeed,
+			"totalDownload":   totalDownload,
+			"totalUpload":     totalUpload,
+			"lastUpdateUnix":  time.Now().Unix(),
 		})
 	})
 

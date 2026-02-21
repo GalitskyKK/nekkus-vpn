@@ -92,7 +92,7 @@ func main() {
 		}
 	}()
 
-	mod := module.New(engine)
+	mod := module.New(engine, *httpPort)
 	go func() {
 		if err := srv.StartGRPC(func(s *grpc.Server) {
 			pb.RegisterNekkusModuleServer(s, mod)
