@@ -44,7 +44,12 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config
 
       - name: Build frontend
+        env:
+          VITE_OUT_DIR: dist
         run: cd frontend && npm ci && npm run build
+
+      - name: Copy frontend dist for embed
+        run: mkdir -p ui/frontend && cp -r frontend/dist ui/frontend/
 
       - name: Generate manifest
         run: |
