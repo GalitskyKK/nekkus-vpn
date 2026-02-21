@@ -56,6 +56,7 @@ jobs:
         run: |
           test -f ui/frontend/dist/index.html || (echo "ui/frontend/dist missing index.html" && exit 1)
           ls -la ui/frontend/dist/
+          grep -r "net__build-id\|VITE_BUILD_ID\|Standalone панель" ui/frontend/dist/ || true
 
       - name: Generate manifest
         run: |
