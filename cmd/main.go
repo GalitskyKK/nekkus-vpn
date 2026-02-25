@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -54,6 +55,10 @@ func waitForServer(host string, port int, timeout time.Duration) {
 
 func main() {
 	flag.Parse()
+
+	if runtime.GOOS == "windows" {
+		vpn.EnsureChildProcessesKillOnExit()
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

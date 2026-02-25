@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  AppShell,
   Button,
   Card,
   DataText,
@@ -293,34 +294,34 @@ function App() {
   )
 
   return (
-    <PageLayout>
+    <PageLayout className="nekkus-glass-root">
       <div className="net">
-        <header className="net__header">
-          <div>
-            <p className="net__eyebrow">nekkus VPN</p>
-            <h1 className="net__title">Standalone панель</h1>
-          </div>
-          <div className="net__status">
-            <StatusDot
-              status={status?.connected ? 'online' : 'offline'}
-              label={status?.connected ? 'Подключено' : 'Отключено'}
-              pulse={!!status?.connected}
-            />
-            <div className="net__status-meta">
-              <span>Сервер: {status?.server || '—'}</span>
-              <span>Конфиг: {activeConfig?.name || '—'}</span>
+        <AppShell
+          logo="Nekkus"
+          title="Net"
+          description="VPN, конфиги и подписки."
+          meta={
+            <div className="net__status">
+              <StatusDot
+                status={status?.connected ? 'online' : 'offline'}
+                label={status?.connected ? 'Подключено' : 'Отключено'}
+                pulse={!!status?.connected}
+              />
+              <div className="net__status-meta">
+                <span>Сервер: {status?.server || '—'}</span>
+                <span>Конфиг: {activeConfig?.name || '—'}</span>
+              </div>
             </div>
-          </div>
-        </header>
-
-        {errorMessage ? (
+          }
+        >
+          {errorMessage ? (
           <div className="net__error" role="alert">
             {errorMessage}
           </div>
         ) : null}
 
         <Section title="Скорость и трафик">
-          <Card className="net__card net__card--metrics" accentTop={!!status?.connected}>
+          <Card className="net__card net__card--metrics nekkus-glass-card" accentTop={!!status?.connected}>
             <div className="net__metrics">
               <div className="net__metric">
                 <span className="net__metric-label">↓ Скачивание</span>
@@ -343,7 +344,7 @@ function App() {
         </Section>
 
         <Section title="Зависимости">
-          <Card className="net__card">
+          <Card className="net__card nekkus-glass-card">
           <div className="net__row">
             <div className="net__field net__field--stretch">
               <span className="net__field-label">sing-box</span>
@@ -363,7 +364,7 @@ function App() {
         </Section>
 
         <Section title="Управление подключением">
-          <Card className="net__card">
+          <Card className="net__card nekkus-glass-card">
           <div className="net__row">
             <Select
               label="Конфиг"
@@ -403,7 +404,7 @@ function App() {
         </Section>
 
         <Section title={`Конфиги (${configs.length})`}>
-          <Card className="net__card">
+          <Card className="net__card nekkus-glass-card">
           <div className="net__header-actions">
             <Button variant="ghost" size="sm" onClick={loadAll} disabled={isBusy}>
               Обновить
@@ -449,7 +450,7 @@ function App() {
         </Section>
 
         <Section title={`Подписки (${subscriptions.length})`}>
-          <Card className="net__card">
+          <Card className="net__card nekkus-glass-card">
           <div className="net__header-actions">
             <Button variant="ghost" size="sm" onClick={handleRefreshSubscriptions} disabled={isBusy}>
               Обновить все
@@ -492,7 +493,7 @@ function App() {
         </Section>
 
         <Section title="Логи sing-box">
-          <Card className="net__card">
+          <Card className="net__card nekkus-glass-card">
           <div className="net__header-actions">
             <Button variant="ghost" size="sm" onClick={() => setLogsVisible((v) => !v)}>
               {logsVisible ? 'Скрыть' : 'Показать'}
@@ -507,6 +508,7 @@ function App() {
           )}
           </Card>
         </Section>
+        </AppShell>
       </div>
       {import.meta.env.VITE_BUILD_ID ? (
         <div className="net__build-id" title="Версия сборки">
